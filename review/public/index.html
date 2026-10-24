@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Office AI · Local review</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23142b23'/%3E%3Ctext x='10' y='29' font-family='Arial' font-size='30' fill='%23d7ead8'%3Eo%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <aside class="sidebar">
+    <a class="brand" href="#overview"><span class="brand-mark" aria-hidden="true">o<span>·</span></span><span>Office AI<small>A private workspace</small></span></a>
+    <p class="nav-label">WORKSPACE REVIEW</p>
+    <nav aria-label="Main navigation">
+      <a href="#overview" data-page="overview"><span aria-hidden="true">▦</span> Overview</a>
+      <a href="#documents" data-page="documents"><span aria-hidden="true">▤</span> Source examples</a>
+      <a href="#assistants" data-page="assistants"><span aria-hidden="true">✳</span> Assistant drafts</a>
+      <a href="#accounts" data-page="accounts"><span aria-hidden="true">≋</span> Accounts</a>
+      <a href="#readiness" data-page="readiness"><span aria-hidden="true">◷</span> Readiness</a>
+    </nav>
+    <div class="sidebar-bottom"><span class="small-dot"></span><span>Local review<small>Read-only · synthetic examples</small></span></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span>Workspace <span class="slash">/</span> <strong id="breadcrumb">Overview</strong></span><span class="review-chip"><span class="small-dot"></span> Review mode</span></header>
+    <main id="main" tabindex="-1"><p class="loading" role="status">Loading the local review…</p></main>
+    <footer>Local Office AI <span>Private by design. Verified before release.</span></footer>
+  </div>
+  <dialog id="source-dialog" aria-labelledby="source-title"><div class="dialog-head"><div><p class="eyebrow">SYNTHETIC SOURCE</p><h2 id="source-title"></h2></div><button class="icon-button" id="close-dialog" aria-label="Close source">×</button></div><div id="source-body"></div></dialog>
+  <noscript>This local review needs JavaScript. No external scripts or services are used.</noscript>
+</body>
+</html>

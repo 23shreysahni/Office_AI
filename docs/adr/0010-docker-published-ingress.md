@@ -1,0 +1,9 @@
+# ADR 0010: Docker host port publication
+
+Status: Accepted for the Windows local pilot; Windows runtime verification pending.
+
+Actual Docker Desktop evidence showed the bootstrap container healthy with `HostConfig.PortBindings` set to `127.0.0.1:8443`, while `NetworkSettings.Ports` was empty and Windows had no 8443 listener. The Compose profile attached the published proxy only to a Docker internal bridge. Docker documents that an internal network has no external connection; the Moby issue history confirms port mappings are unavailable from internal-only bridges ([internal networking](https://docs.docker.com/compose/how-tos/networking/), [port publishing issue](https://github.com/moby/moby/issues/36174)). This prevented the requested local browser access even though synthetic model inference passed.
+
+Attach the Nginx proxy and bootstrap to a dedicated normal bridge as well as the existing internal `frontend` network. Disable bridge IP masquerading on this ingress bridge. Only the Nginx service joins it; Open WebUI and Ollama remain on their existing internal frontend/inference networks. Continue binding bootstrap specifically to `127.0.0.1:8443`; never replace it with a wildcard bind. The LAN proxy retains its explicitly reviewed private-address binding. Keep host firewall/effective egress behaviour in actual-host acceptance: disabled masquerading is a bridge constraint, not proof that every Docker Desktop route is denied.
+
+Update policy validation to require the named bridge and masquerading setting and the precise service attachments. The targeted repair backs up both changed runtime files before installing the fixed pair, checks source/runtime hashes, preserves state and supports interrupted reruns. It refuses unrelated changes. Re-run real Compose parsing and live Windows port/listener tests before claiming reachability.

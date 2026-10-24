@@ -1,0 +1,1139 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Local Office AI Phase 3 library API",
+    "version": "0.1.0-draft",
+    "description": "Review draft only; NOT IMPLEMENTED. Requires accepted Phase 2 identity/current grants and proposed can_manage migration. No production routes enabled. Session/CSRF/Origin inherit Phase 2. Reject unknown fields/query parameters, URL ingestion and unsupported files. All protected metadata/content responses are no-store. Standard JSON bodies at most 16 KiB; multipart at most 21 MiB. Authorisation precedes database ranking and model dispatch. No cloud model or OCR support is implied."
+  },
+  "servers": [
+    {
+      "url": "https://office-ai.internal",
+      "description": "Placeholder; use the reviewed private HTTPS origin."
+    }
+  ],
+  "security": [
+    {
+      "session": []
+    }
+  ],
+  "paths": {
+    "/api/library/documents": {
+      "get": {
+        "operationId": "listDocuments",
+        "description": "List only currently authorised document metadata; scope predicates precede pagination. No global document/duplicate counts.",
+        "responses": {
+          "200": {
+            "description": "Authorised result; no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "uploadDocument",
+        "description": "Require current department role, explicit active collection grant and can_manage. Stage/scan/queue one bounded file; no filename-based paths or cross-scope deduplication disclosure.",
+        "responses": {
+          "202": {
+            "description": "Queued with no partial searchable revision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/Unsupported"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Upload"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/documents/{documentId}": {
+      "parameters": [
+        {
+          "name": "documentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "documentStatus",
+        "description": "Current authorisation on every metadata/status read; no internal paths, chunks or diagnostics.",
+        "responses": {
+          "200": {
+            "description": "Authorised result; no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteDocument",
+        "description": "Require can_manage and current department role/grant. Tombstone transactionally before asynchronous physical cleanup; no request body. Late jobs cannot resurrect it.",
+        "responses": {
+          "202": {
+            "description": "Queued with no partial searchable revision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      }
+    },
+    "/api/library/documents/{documentId}/content": {
+      "parameters": [
+        {
+          "name": "documentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "downloadOriginal",
+        "description": "Revalidate current grant, active document and revision. No public/signed-link bypass. Return original as attachment, not browser-executable content.",
+        "responses": {
+          "200": {
+            "description": "Authorised original bytes.",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Attachment with safely encoded filename."
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/library/documents/{documentId}/reindex": {
+      "parameters": [
+        {
+          "name": "documentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "reindexDocument",
+        "description": "Require current manage grant and expected active revision. Build non-visible revision; publish atomically after state/permission recheck. Failed reindex preserves the prior approved revision.",
+        "responses": {
+          "202": {
+            "description": "Queued with no partial searchable revision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReindexRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/jobs/{jobId}": {
+      "parameters": [
+        {
+          "name": "jobId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "jobStatus",
+        "description": "Revalidate access to the job document collection; no queue-global status or parser output.",
+        "responses": {
+          "200": {
+            "description": "Authorised result; no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/library/search": {
+      "post": {
+        "operationId": "searchLibrary",
+        "description": "Authorise requested scopes and rank only eligible active chunks. Never globally retrieve then filter. No shared result cache or logged query.",
+        "responses": {
+          "200": {
+            "description": "Authorised result; no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/answers": {
+      "post": {
+        "operationId": "answerLibraryQuestion",
+        "description": "Bounded non-streaming answer using fixed local approved models. Recheck grants/revisions before dispatch and response; validate citations against evidence. Abort on revocation/cancellation; abstain if support absent. No caller-selected model, URL, tool or identity.",
+        "responses": {
+          "200": {
+            "description": "Authorised result; no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/citations/{citationId}": {
+      "parameters": [
+        {
+          "name": "citationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "resolveCitation",
+        "description": "Resolve exact active source revision/location with current authorisation; absent, stale and unauthorised IDs disclose no content.",
+        "responses": {
+          "200": {
+            "description": "Authorised result; no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-office_session",
+        "description": "Verified server-side Phase 2 session, not an upstream WebUI JWT or caller-supplied role."
+      },
+      "csrf": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "Session-bound CSRF token and exact approved Origin required on POST/DELETE."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "requestId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "unauthorised",
+              "forbidden",
+              "not_found",
+              "invalid_request",
+              "too_large",
+              "unsupported_media",
+              "conflict",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "collectionId",
+          "displayName",
+          "state",
+          "activeRevisionId",
+          "extractionComplete"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "collectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "quarantined",
+              "queued",
+              "processing",
+              "ready",
+              "rejected",
+              "failed",
+              "ocr_required",
+              "deleting",
+              "deleted"
+            ]
+          },
+          "activeRevisionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "extractionComplete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DocumentPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          }
+        }
+      },
+      "Location": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "page"
+            ],
+            "properties": {
+              "kind": {
+                "const": "page"
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "label"
+            ],
+            "properties": {
+              "kind": {
+                "const": "section"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "startLine",
+              "endLine"
+            ],
+            "properties": {
+              "kind": {
+                "const": "lines"
+              },
+              "startLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endLine": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        ]
+      },
+      "Citation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "documentId",
+          "revisionId",
+          "location",
+          "displayName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 180
+          }
+        }
+      },
+      "CitationDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "citation",
+          "excerpt"
+        ],
+        "properties": {
+          "citation": {
+            "$ref": "#/components/schemas/Citation"
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        }
+      },
+      "Hit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "citation",
+          "text"
+        ],
+        "properties": {
+          "citation": {
+            "$ref": "#/components/schemas/Citation"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        }
+      },
+      "SearchResults": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hits"
+        ],
+        "properties": {
+          "hits": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/Hit"
+            }
+          }
+        }
+      },
+      "SearchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "collectionIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "default": 5
+          }
+        }
+      },
+      "AnswerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "question"
+        ],
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "collectionIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "Answer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "text",
+          "citations",
+          "requiresReview"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "answer",
+              "abstain"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "citations": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            }
+          },
+          "requiresReview": {
+            "const": true
+          }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "documentId",
+          "state",
+          "errorCode"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "quarantined",
+              "queued",
+              "processing",
+              "ready",
+              "rejected",
+              "failed",
+              "ocr_required",
+              "deleting",
+              "deleted"
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "scan_unavailable",
+              "scan_rejected",
+              "invalid_file",
+              "limit_exceeded",
+              "ocr_required",
+              "extraction_incomplete",
+              "model_unavailable",
+              "permission_revoked",
+              "processing_failed"
+            ]
+          }
+        }
+      },
+      "Accepted": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "jobId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ReindexRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevisionId"
+        ],
+        "properties": {
+          "expectedRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Upload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "collectionId",
+          "file"
+        ],
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "Exactly one validated PDF/DOCX/TXT/MD, at most 20 MiB. Multipart request at most 21 MiB."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorised": {
+        "description": "No active verified application session.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Permission, Origin or CSRF denied; no resource details.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Absent and forbidden object IDs use the same response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Invalid": {
+        "description": "Invalid fields/query/format; input not echoed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "TooLarge": {
+        "description": "Upload/extraction/request limits exceeded.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unsupported": {
+        "description": "Unsupported content or ambiguous format.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Revision/state conflict; no partial publication.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit or bounded queue capacity exceeded.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "Local dependency unavailable; no remote fallback or raw diagnostics.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

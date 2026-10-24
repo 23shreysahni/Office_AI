@@ -1,0 +1,12 @@
+# Opt in only after the target NVIDIA driver/toolkit is verified.
+services:
+  ollama:
+    environment:
+      CUDA_VISIBLE_DEVICES: '0'
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

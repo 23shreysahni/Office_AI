@@ -1,0 +1,1468 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Local Office AI Phase 2 access API",
+    "version": "0.1.0-draft",
+    "description": "Review draft only; NOT IMPLEMENTED. Same-origin internal HTTPS API. No public registration, passwords, document ingestion, retrieval or financial operations. All protected responses are no-store. Every mutation requires the fixed HTTPS Origin plus session-bound X-CSRF-Token. Unknown properties/query parameters and JSON above 16 KiB are rejected. Public login/callback use separate one-use OIDC transaction controls. API bearer tokens and upstream WebUI cookies are not accepted."
+  },
+  "servers": [
+    {
+      "url": "https://office-ai.internal",
+      "description": "Placeholder only; replace with the approved private DNS origin."
+    }
+  ],
+  "security": [
+    {
+      "session": []
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Non-sensitive readiness only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/access/login": {
+      "get": {
+        "operationId": "beginLogin",
+        "security": [],
+        "description": "Start fixed internal-provider authorisation-code/PKCE flow. No issuer or return URL input. Rate limited; one-use browser-bound state/nonce transaction.",
+        "responses": {
+          "302": {
+            "description": "Redirect to the approved provider; no-store and a short-lived Secure/HttpOnly transaction cookie."
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/access/callback": {
+      "get": {
+        "operationId": "finishLogin",
+        "security": [],
+        "description": "Validate provider response, transaction cookie, state, nonce, PKCE and token claims before creating a local session for a pre-enrolled active subject. Reject error/replayed/unknown query parameters; never log callback query values.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 512
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect only to /access/ with rotated host-only Secure/HttpOnly/SameSite=Lax session cookie; no-store."
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/access/session": {
+      "get": {
+        "operationId": "currentSession",
+        "description": "Current local identity/roles only; no provider token.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/access/csrf": {
+      "get": {
+        "operationId": "csrfToken",
+        "description": "Return the current server-session-bound CSRF token; no-store.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Csrf"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/access/logout": {
+      "post": {
+        "operationId": "logout",
+        "description": "Revoke local session and expire cookie even when provider logout is unavailable.",
+        "responses": {
+          "204": {
+            "description": "Session revoked; cookie expired."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/collections": {
+      "get": {
+        "operationId": "authorisedCollections",
+        "description": "List only active collections matching current department role AND explicit collection grant. Scope predicates apply before pagination/counting; platform_admin has no bypass. No document contents.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/collections/{collectionId}": {
+      "parameters": [
+        {
+          "name": "collectionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "authorisedCollection",
+        "description": "Authorise the database object lookup. Missing and forbidden IDs return the same 404; no content is stored here.",
+        "responses": {
+          "200": {
+            "description": "Authorised collection metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Collection"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/access/admin/users": {
+      "get": {
+        "operationId": "listUsers",
+        "description": "Platform administrator only. No passwords, tokens or confidential department resources.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "enrolUser",
+        "description": "Platform administrator only: enrol an approved existing IdP subject with no default collection grants. Does not create a provider account.",
+        "responses": {
+          "201": {
+            "description": "Enrolled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrolUser"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/admin/users/{userId}": {
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "patch": {
+        "operationId": "changeUser",
+        "description": "Platform administrator only; require at least one active/roles change plus expectedVersion. No self-entitlement/activation changes or final-admin removal; concurrent changes and audit are transactional. Deactivation revokes sessions.",
+        "responses": {
+          "200": {
+            "description": "Changed and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeUser"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/admin/users/{userId}/grants": {
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "listGrants",
+        "description": "Platform administrator only; configuration IDs only, without collection contents.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/admin/users/{userId}/grants/{collectionId}": {
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "collectionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "put": {
+        "operationId": "grantCollection",
+        "description": "Platform administrator only; idempotently grant an active collection to another enrolled user. No request body. A read still requires the matching department role. Change and audit commit together.",
+        "responses": {
+          "200": {
+            "description": "Grant exists and outcome audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Grant"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "revokeCollection",
+        "description": "Platform administrator only; idempotently revoke another user's grant. No request body; next request observes revocation.",
+        "responses": {
+          "204": {
+            "description": "Grant absent; outcome audited"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/admin/collections": {
+      "get": {
+        "operationId": "listManagedCollections",
+        "description": "Platform administrator only; configuration metadata without documents, snippets or confidential counts.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createCollection",
+        "description": "Platform administrator only; create empty scope metadata. Does not ingest documents or grant data access.",
+        "responses": {
+          "201": {
+            "description": "Empty collection created and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Collection"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCollection"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/admin/audit": {
+      "get": {
+        "operationId": "listAudit",
+        "description": "Platform administrator only; bounded stable cursor pagination of content-free audit records. Audit this read.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ]
+      }
+    },
+    "/api/access/admin/collections/{collectionId}": {
+      "parameters": [
+        {
+          "name": "collectionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "patch": {
+        "operationId": "changeCollection",
+        "description": "Platform administrator only; activate/deactivate collection metadata. Security change and audit are atomic; deactivation removes eligibility on the next read. Does not alter document content.",
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeCollection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Collection state changed and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Collection"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-office_session",
+        "description": "Opaque server-side session; Secure, HttpOnly, Path=/, SameSite=Lax, no Domain. Hashed at rest; current grants checked per request."
+      },
+      "csrf": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "Server-session-bound token, required with exact approved Origin for state changes."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "requestId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "unauthorised",
+              "forbidden",
+              "not_found",
+              "invalid_request",
+              "conflict",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "issuer",
+          "subject",
+          "active",
+          "roles",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": "string",
+            "format": "uri"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "platform_admin",
+                "editorial_user",
+                "hr_user",
+                "sales_user",
+                "accounts_user",
+                "accounts_approver"
+              ]
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "UserPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          }
+        }
+      },
+      "Collection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "department",
+          "label",
+          "active"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "department": {
+            "type": "string",
+            "enum": [
+              "editorial",
+              "hr",
+              "sales",
+              "accounts"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Collection"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          }
+        }
+      },
+      "Grant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId",
+          "collectionId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "collectionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GrantPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          }
+        }
+      },
+      "AuditEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "at",
+          "actorId",
+          "targetId",
+          "requestId",
+          "action",
+          "outcome"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "targetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "login",
+              "logout",
+              "user_enrolled",
+              "user_deactivated",
+              "roles_changed",
+              "grant_added",
+              "grant_revoked",
+              "collection_changed",
+              "resource_denied",
+              "audit_read",
+              "bootstrap"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "denied",
+              "failed"
+            ]
+          }
+        }
+      },
+      "AuditPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          }
+        }
+      },
+      "EnrolUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "issuer",
+          "subject",
+          "roles"
+        ],
+        "properties": {
+          "issuer": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048,
+            "description": "Must equal the fixed approved internal issuer."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "roles": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "platform_admin",
+                "editorial_user",
+                "hr_user",
+                "sales_user",
+                "accounts_user",
+                "accounts_approver"
+              ]
+            }
+          }
+        }
+      },
+      "ChangeUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedVersion"
+        ],
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "platform_admin",
+                "editorial_user",
+                "hr_user",
+                "sales_user",
+                "accounts_user",
+                "accounts_approver"
+              ]
+            }
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "active"
+            ]
+          },
+          {
+            "required": [
+              "roles"
+            ]
+          }
+        ]
+      },
+      "CreateCollection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "department",
+          "label"
+        ],
+        "properties": {
+          "department": {
+            "type": "string",
+            "enum": [
+              "editorial",
+              "hr",
+              "sales",
+              "accounts"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId",
+          "roles",
+          "idleExpiresAt",
+          "absoluteExpiresAt"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roles": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "platform_admin",
+                "editorial_user",
+                "hr_user",
+                "sales_user",
+                "accounts_user",
+                "accounts_approver"
+              ]
+            }
+          },
+          "idleExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "absoluteExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Csrf": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 256
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ]
+          }
+        }
+      },
+      "ChangeCollection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "active"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorised": {
+        "description": "No valid active application session.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Current permission or Origin/CSRF checks denied.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Absent or unauthorised resource; identical response shape.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Invalid": {
+        "description": "Malformed or unsupported request; no input echoed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Duplicate identity, stale version, self-change or last-administrator conflict.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Request rate exceeded; Retry-After is supplied.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "Dependency unavailable; no internal diagnostic content.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}
