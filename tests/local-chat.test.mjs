@@ -26,6 +26,22 @@ test('real Compose parser preserves loopback-only bootstrap and private model/UI
   assert.equal(doc.services.webui.environment.ENABLE_SIGNUP, 'false');
   assert.equal(doc.services.webui.environment.DEFAULT_MODELS, 'qwen3.5:4b');
   assert.equal(doc.services.webui.environment.CORS_ALLOW_ORIGIN, 'https://localhost;https://localhost:8443');
+  const params = JSON.parse(doc.services.webui.environment.DEFAULT_MODEL_PARAMS);
+  assert.equal(params.num_predict, 1536);
+  assert.equal(params.num_ctx, 4096);
+  assert.match(params.system, /enough explanation/);
+});
+
+test('9B pilot requires NVIDIA and its exact memory profile, with validated rollback artefact', () => {
+  const digest = `sha256:${'a'.repeat(64)}`;
+  const cfg = { ...localChatConfig(), MODEL_NAME: 'qwen3.5:9b', OLLAMA_MEMORY: '7g', COMPUTE_MODE: 'nvidia', MODEL_DIGEST: digest };
+  assert.doesNotThrow(() => checkLocalChatConfig(cfg));
+  for (const extra of [{ COMPUTE_MODE: 'cpu' }, { COMPUTE_MODE: 'auto' }, { OLLAMA_MEMORY: '12g' }, { WEBUI_MEMORY: '4g' }]) assert.throws(() => checkLocalChatConfig({ ...cfg, ...extra }));
+  const selected = { name: cfg.MODEL_NAME, digest };
+  const rollback = { name: 'qwen3.5:4b', digest: 'b'.repeat(64) };
+  assert.doesNotThrow(() => checkModels({ models: [rollback, selected] }, cfg));
+  for (const models of [[rollback], [selected, selected], [selected, { ...rollback, name: 'unapproved:cloud' }], [selected, { ...rollback, digest: 'bad' }], [{ ...selected, digest: 'b'.repeat(64) }]]) assert.throws(() => checkModels({ models }, cfg));
+  assert.throws(() => checkModels({ models: [rollback, selected] }, { ...cfg, OFFICE_HOSTNAME: 'office-ai.internal' }));
 });
 
 test('Ollama complete bare SHA-256 API digest and prefixed configuration digest identify the same model', () => {

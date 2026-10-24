@@ -78,7 +78,7 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_BASE_URLS: http://ollama:11434
       DEFAULT_MODELS: ${MODEL_NAME:?Set MODEL_NAME}
-      DEFAULT_MODEL_PARAMS: '{"system":"Use British English. Be concise and evidence-based. Generated content must be reviewed.","num_ctx":4096,"num_predict":250,"temperature":0.2}'
+      DEFAULT_MODEL_PARAMS: '{"system":"Use British English. Give clear, evidence-based answers with enough explanation and examples to address the question fully. Keep answers brief when the user requests it. Generated content must be reviewed.","num_ctx":4096,"num_predict":1536,"temperature":0.2}'
       DEFAULT_LOCALE: en-GB
       WEBUI_BANNERS: '[{"id":"phase1","type":"warning","title":"Synthetic pilot only","content":"Generated content must be reviewed. Do not enter private documents or financial data.","dismissible":false}]'
       OFFLINE_MODE: 'true'

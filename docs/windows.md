@@ -4,6 +4,12 @@ Status: Windows host route prepared; live Windows/WSL acceptance NOT RUN. Use sy
 
 ## One-command local chat pilot
 
+The user authorised upgrading this host's existing NVIDIA pilot to 9B on 24 October 2026. The selected profile uses `MODEL_NAME=qwen3.5:9b`, `OLLAMA_MEMORY=7g`, `WEBUI_MEMORY=2g` and `COMPUTE_MODE=nvidia`, with the actual installed model digest recorded by provisioning. WSL's memory ceiling is 10 GiB; changing it requires restarting WSL and Docker Desktop. The 4B configuration and changed source files are backed up with `.before-9b` suffixes inside `/srv/office-ai-local`; the model artefact is retained. The ordinary launcher preserves the selected profile. See [ADR 0013](adr/0013-local-9b-and-longer-answers.md). Fresh installations still select 4B by default.
+
+The default answer ceiling is now 1536 tokens instead of 250, with a prompt requesting sufficient explanation. Start a new chat and select `qwen3.5:9b`; saved conversation, user or model overrides can retain prior settings. The limit is a ceiling, so the model may finish sooner. Context remains 4096 tokens and concurrency remains one.
+
+On 24 October 2026 the existing pilot on this host was explicitly switched to `COMPUTE_MODE=nvidia` in `/srv/office-ai-local/.env` after a successful offline container GPU probe. The RTX 3050 (8 GiB) ran the unchanged 4B model with `100% GPU` residency. The original configuration is saved as `.env.before-nvidia`; state and secrets were preserved. The ordinary start-chat launcher reuses this setting. This does not change the CPU default for fresh pilots. See [ADR 0012](adr/0012-local-pilot-gpu.md) for verification and rollback.
+
 If the local pilot stops with either `invalid mount path: 'mode=1777'` or `ECONNREFUSED 127.0.0.1:8443`, run this targeted recovery from Windows PowerShell:
 
 ```powershell
