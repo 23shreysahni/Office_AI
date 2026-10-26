@@ -40,7 +40,7 @@ export function provisionFromWindows({ invoke = runWsl, installTools = setupWsl,
   installTools({ invoke, platform, log });
   const memory = Number(invoke(['-d', 'Ubuntu', '--exec', 'docker', 'info', '--format', '{{.MemTotal}}']));
   if (!Number.isSafeInteger(memory) || memory < 7.5 * 1024 ** 3) throw new Error('The local 4B pilot requires at least 7.5 GiB allocated to the Linux engine; no model-fit guarantee is made. Review Docker/WSL resources.');
-  log('Using the specified qwen3.5:4b fallback for this loopback-only pilot. A real generation test must pass.');
+  log('Reusing the approved local pilot profile, or the 4B fallback on first setup. A real generation test must pass.');
   const linuxSource = invoke(['-d', 'Ubuntu', '--exec', 'wslpath', '-a', '-u', path.resolve(source).replace(/[\\/]$/, '')]);
   if (!linuxSource.startsWith('/') || /[\r\n\0]/.test(linuxSource)) throw new Error('Cannot resolve the Windows source directory inside Ubuntu.');
   invoke(['-d', 'Ubuntu', '--exec', 'bash', '-n'], { input: stagingScript });
@@ -93,7 +93,7 @@ async function main() {
     powershell("$ErrorActionPreference='Stop'; Import-Certificate -FilePath $env:OFFICE_AI_CA_PATH -CertStoreLocation Cert:\\CurrentUser\\Root | Out-Null", env);
     if (powershell(check, env) !== '1') throw new Error('The pilot CA was not found in the Windows user trust store.');
   }
-  console.log(`Open WebUI: ${result.url}\nCreate your named administrator account there and select qwen3.5:4b. Enter the password yourself; do not paste it into chat.\nThis is a local synthetic pilot. Browser chat, cancellation, offline restart and full phase acceptance still need verification.`);
+  console.log(`Open WebUI: ${result.url}\nUse your named administrator account and the configured default model. Enter the password yourself; do not paste it into chat.\nThis is a local synthetic pilot. Browser chat, cancellation, offline restart and full phase acceptance still need verification.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

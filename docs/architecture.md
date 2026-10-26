@@ -6,6 +6,8 @@ Compute amendment (24 October 2026): the regular foundation deployment now selec
 
 ## Foundation boundary
 
+The user-authorised 9B local-pilot profile uses explicit NVIDIA mode, seven GiB Ollama/two GiB WebUI limits and a 10 GiB WSL ceiling on the initial 16 GiB Windows host. The historical 4B profile remains the fresh-install fallback. Both profiles keep loopback-only HTTPS and the same phase boundaries. Longer-answer defaults permit 1536 output tokens at context 4096. See [ADR 0013](adr/0013-local-9b-and-longer-answers.md).
+
 For initial Windows workstation chat, the [local launcher](windows.md#one-command-local-chat-pilot) provisions a separate `/srv/office-ai-local` deployment, bound only to `127.0.0.1:8443` with a localhost certificate. It uses the specified 4B fallback and requires an internal generation test and Windows HTTPS verification before offering current-user CA trust. The user creates the first named administrator directly in Open WebUI. This pilot cannot pass the regular LAN startup guard and does not imply phase acceptance; see [ADR 0009](adr/0009-local-chat-launcher.md).
 
 A separate [read-only local review interface](local-review.md) now runs directly on Windows/Linux Node.js, limited to loopback and synthetic/public-source review material. [ADR 0008](adr/0008-local-review.md) distinguishes it from the production stack: no identity, upload, retrieval, inference or financial service is added and no phase acceptance is implied.

@@ -10,6 +10,15 @@ export function canonicalModelDigest(value) {
 }
 export function checkModels(body, cfg) {
   const models = body?.models;
+  if (cfg.OFFICE_HOSTNAME === 'localhost' && cfg.MODEL_NAME === 'qwen3.5:9b') {
+    ensure(Array.isArray(models) && models.length >= 1 && models.length <= 2 &&
+      new Set(models.map(model => model.name)).size === models.length &&
+      models.every(model => ['qwen3.5:4b', 'qwen3.5:9b'].includes(model.name)), 'Unexpected local pilot model set');
+    for (const model of models) canonicalModelDigest(model.digest);
+    const selected = models.filter(model => model.name === cfg.MODEL_NAME);
+    ensure(selected.length === 1 && canonicalModelDigest(selected[0].digest) === cfg.MODEL_DIGEST, 'Selected local model digest differs');
+    return;
+  }
   ensure(Array.isArray(models) && models.length === 1 && models[0].name === cfg.MODEL_NAME && canonicalModelDigest(models[0].digest) === cfg.MODEL_DIGEST, 'Installed models do not match the approved name and digest');
 }
 

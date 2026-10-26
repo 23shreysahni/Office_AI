@@ -17,6 +17,11 @@ export function localChatConfig() {
 export function checkLocalChatConfig(cfg) {
   validateConfig(cfg, { bootstrap: true });
   const expected = localChatConfig();
+  if (cfg.MODEL_NAME === 'qwen3.5:9b') {
+    expected.MODEL_NAME = 'qwen3.5:9b';
+    expected.OLLAMA_MEMORY = '7g';
+    if (cfg.COMPUTE_MODE !== 'nvidia') throw new Error('The local 9B profile requires explicit NVIDIA compute.');
+  }
   for (const key of Object.keys(expected)) {
     if (key !== 'MODEL_DIGEST' && cfg[key] !== expected[key]) throw new Error('Existing local pilot configuration differs; it was not overwritten. Review it before continuing.');
   }
@@ -45,16 +50,17 @@ export function provisionLocalChat() {
       const disk = statfsSync(root);
       if (disk.bavail * disk.bsize < 16 * 1024 ** 3) throw new Error('At least 16 GiB free Linux filesystem space is required for initial provisioning; also check the Windows disk hosting Docker/WSL.');
       stack('stop');
-      console.log('Downloading pinned images and the specified 4B fallback. This requires several GB and may take time.');
+      console.log(`Downloading pinned images and ${cfg.MODEL_NAME}. This requires several GB and may take time.`);
       stack('pull-images'); stack('pull-model');
     }
     console.log('Starting isolated HTTPS bootstrap and checking the installed local model…');
     started = true;
     stack('bootstrap');
     const state = JSON.parse(stack('inspect', { capture: true, timeout: 60_000 }));
-    if (!Array.isArray(state.models) || state.models.length !== 1 || state.models[0].name !== cfg.MODEL_NAME) throw new Error('The installed model set differs from the local pilot selection.');
-    if (cfg.MODEL_DIGEST && cfg.MODEL_DIGEST !== state.models[0].digest) throw new Error('The installed model digest changed; review it before use.');
-    cfg = { ...cfg, MODEL_DIGEST: state.models[0].digest };
+    const selected = state.models?.filter(model => model.name === cfg.MODEL_NAME);
+    if (!selected || selected.length !== 1) throw new Error('The selected local pilot model is missing or duplicated.');
+    if (cfg.MODEL_DIGEST && cfg.MODEL_DIGEST !== selected[0].digest) throw new Error('The installed model digest changed; review it before use.');
+    cfg = { ...cfg, MODEL_DIGEST: selected[0].digest };
     checkModels({ models: state.models }, cfg);
     if (state.features?.auth !== true || state.features?.enable_signup !== false) throw new Error('Unsafe upstream authentication settings; local chat entry point stopped.');
     const next = `${envFile}.next`;
